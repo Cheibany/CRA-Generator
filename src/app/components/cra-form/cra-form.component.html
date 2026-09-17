@@ -22,7 +22,9 @@
         <div class="field">
           <label>Mois</label>
           <select [(ngModel)]="mois" (ngModelChange)="genererApercu()">
-            <option *ngFor="let m of mois_liste" [value]="m.valeur">{{ m.nom }}</option>
+            @for (m of mois_liste; track m) {
+              <option [value]="m.valeur">{{ m.nom }}</option>
+            }
           </select>
         </div>
         <div class="field">
@@ -54,125 +56,128 @@
       </div>
 
       <button class="btn-generate" (click)="genererCRA()" [disabled]="isGenerating">
-        <span *ngIf="!isGenerating">Générer le CRA (.docx)</span>
-        <span *ngIf="isGenerating" class="btn-loading">
-          <span class="spinner"></span> Génération...
-        </span>
+        @if (!isGenerating) {
+          <span>Générer le CRA (.docx)</span>
+        }
+        @if (isGenerating) {
+          <span class="btn-loading">
+            <span class="spinner"></span> Génération...
+          </span>
+        }
       </button>
     </div>
 
-<!-- APERÇU -->
-<div class="apercu-wrapper" *ngIf="showPreview && semaines.length">
-
-  <div class="slider-nav">
-    <button class="nav-arrow" (click)="semainePrecedente()" [disabled]="semaineActive === 0">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M15 18l-6-6 6-6"/>
-      </svg>
-    </button>
-
-    <div class="slider-dots">
-      <button
-        *ngFor="let s of semaines; let i = index"
-        class="dot"
-        [class.active]="i === semaineActive"
-        (click)="allerASemaine(i)">
-      </button>
-    </div>
-
-    <button class="nav-arrow" (click)="semaineSuivante()" [disabled]="semaineActive === semaines.length - 1">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="slider-viewport" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
-    <div class="slider-track" [style.transform]="'translateX(-' + (semaineActive * 100) + '%)'">
-
-      <div class="semaine-card" *ngFor="let semaine of semaines; let i = index">
-
-        <div class="semaine-card__header">
-          <div class="semaine-card__title">
-            <span class="semaine-badge">Semaine {{ i + 1 }} / {{ semaines.length }}</span>
-            <span class="semaine-periode">{{ semaine.periodeDebut }} → {{ semaine.periodeFin }}</span>
+    <!-- APERÇU -->
+    @if (showPreview && semaines.length) {
+      <div class="apercu-wrapper">
+        <div class="slider-nav">
+          <button class="nav-arrow" (click)="semainePrecedente()" [disabled]="semaineActive === 0">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <div class="slider-dots">
+            @for (s of semaines; track s; let i = $index) {
+              <button
+                class="dot"
+                [class.active]="i === semaineActive"
+                (click)="allerASemaine(i)">
+              </button>
+            }
           </div>
-          <span class="jours-badge">{{ getNbJoursTravailles(semaine) }} / 5 jours</span>
+          <button class="nav-arrow" (click)="semaineSuivante()" [disabled]="semaineActive === semaines.length - 1">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
         </div>
-
-        <div class="apercu-scroll">
-          <table class="apercu-table">
-            <colgroup>
-              <col style="width:9.93%"><col style="width:7.81%">
-              <col style="width:6.19%"><col style="width:1.45%">
-              <col style="width:21.42%"><col style="width:7.19%">
-              <col style="width:4.27%"><col style="width:41.73%">
-            </colgroup>
-            <tbody>
-              <tr>
-                <td colspan="2" class="label">Mission</td>
-                <td colspan="6" class="bold">{{ infos.marche }}<br>{{ infos.prestation }}</td>
-              </tr>
-              <tr>
-                <td colspan="2" class="label">Période</td>
-                <td class="label bold">Du</td>
-                <td colspan="3" class="bold center">{{ semaine.periodeDebut }}</td>
-                <td class="label bold">Au</td>
-                <td class="bold center">{{ semaine.periodeFin }}</td>
-              </tr>
-              <tr>
-                <td colspan="2" class="label">Consultant</td>
-                <td colspan="6" class="bold">{{ infos.consultant }}</td>
-              </tr>
-              <tr>
-                <td colspan="2" class="label">Profil</td>
-                <td colspan="6" class="bold">{{ infos.profil }}</td>
-              </tr>
-              <tr class="header-row">
-                <td class="label bold center vcenter">Jour</td>
-                <td class="label bold center vcenter">Date</td>
-                <td colspan="2" class="label bold center vcenter">Facturé J/H</td>
-                <td colspan="4" class="label bold center">Nature Intervention</td>
-              </tr>
-              <tr *ngFor="let j of semaine.jours" class="jour-row" [class.jour-ferie]="j.ferie">
-                <td class="vcenter">{{ j.jour }}</td>
-                <td class="center vcenter">{{ j.date }}</td>
-                <td colspan="2" class="center vcenter">
-                  <button type="button" class="toggle-facture" [class.on]="j.facture === '1'" (click)="toggleFacture(j)">
-                    {{ j.facture === '1' ? '1' : '0' }}
-                  </button>
-                </td>
-                <td colspan="4">
-                  <textarea
-                    class="cell-textarea"
-                    [(ngModel)]="j.natureIntervention"
-                    (input)="autoGrow($event)"
-                    rows="2"
-                    placeholder="Nature de l'intervention...">
-                  </textarea>
-                </td>
-              </tr>
-              <tr class="total-row">
-                <td class="bold">Total</td>
-                <td></td>
-                <td colspan="2"></td>
-                <td colspan="4" class="bold">({{ getNbJoursTravailles(semaine).toString().padStart(2,'0') }}) jours Profil {{ infos.profil }}</td>
-              </tr>
-              <tr>
-                <td colspan="5" class="label bold center">Pour 01 Talent</td>
-                <td colspan="3" class="label bold center">{{ infos.pourClient }}</td>
-              </tr>
-              <tr class="signature-row">
-                <td colspan="5">&nbsp;</td>
-                <td colspan="3">&nbsp;</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="slider-viewport" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
+          <div class="slider-track" [style.transform]="'translateX(-' + (semaineActive * 100) + '%)'">
+            @for (semaine of semaines; track semaine; let i = $index) {
+              <div class="semaine-card">
+                <div class="semaine-card__header">
+                  <div class="semaine-card__title">
+                    <span class="semaine-badge">Semaine {{ i + 1 }} / {{ semaines.length }}</span>
+                    <span class="semaine-periode">{{ semaine.periodeDebut }} → {{ semaine.periodeFin }}</span>
+                  </div>
+                  <span class="jours-badge">{{ getNbJoursTravailles(semaine) }} / 5 jours</span>
+                </div>
+                <div class="apercu-scroll">
+                  <table class="apercu-table">
+                    <colgroup>
+                    <col style="width:9.93%"><col style="width:7.81%">
+                    <col style="width:6.19%"><col style="width:1.45%">
+                    <col style="width:21.42%"><col style="width:7.19%">
+                    <col style="width:4.27%"><col style="width:41.73%">
+                  </colgroup>
+                  <tbody>
+                    <tr>
+                      <td colspan="2" class="label">Mission</td>
+                      <td colspan="6" class="bold">{{ infos.marche }}<br>{{ infos.prestation }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="label">Période</td>
+                      <td class="label bold">Du</td>
+                      <td colspan="3" class="bold center">{{ semaine.periodeDebut }}</td>
+                      <td class="label bold">Au</td>
+                      <td class="bold center">{{ semaine.periodeFin }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="label">Consultant</td>
+                      <td colspan="6" class="bold">{{ infos.consultant }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="label">Profil</td>
+                      <td colspan="6" class="bold">{{ infos.profil }}</td>
+                    </tr>
+                    <tr class="header-row">
+                      <td class="label bold center vcenter">Jour</td>
+                      <td class="label bold center vcenter">Date</td>
+                      <td colspan="2" class="label bold center vcenter">Facturé J/H</td>
+                      <td colspan="4" class="label bold center">Nature Intervention</td>
+                    </tr>
+                    @for (j of semaine.jours; track j) {
+                      <tr class="jour-row" [class.jour-ferie]="j.ferie">
+                        <td class="vcenter">{{ j.jour }}</td>
+                        <td class="center vcenter">{{ j.date }}</td>
+                        <td colspan="2" class="center vcenter">
+                          <button type="button" class="toggle-facture" [class.on]="j.facture === '1'" (click)="toggleFacture(j)">
+                            {{ j.facture === '1' ? '1' : '0' }}
+                          </button>
+                        </td>
+                        <td colspan="4">
+                          <textarea
+                            class="cell-textarea"
+                            [(ngModel)]="j.natureIntervention"
+                            (input)="autoGrow($event)"
+                            rows="2"
+                            placeholder="Nature de l'intervention...">
+                          </textarea>
+                        </td>
+                      </tr>
+                    }
+                    <tr class="total-row">
+                      <td class="bold">Total</td>
+                      <td></td>
+                      <td colspan="2"></td>
+                      <td colspan="4" class="bold">({{ getNbJoursTravailles(semaine).toString().padStart(2,'0') }}) jours Profil {{ infos.profil }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="5" class="label bold center">Pour 01 Talent</td>
+                      <td colspan="3" class="label bold center">{{ infos.pourClient }}</td>
+                    </tr>
+                    <tr class="signature-row">
+                      <td colspan="5">&nbsp;</td>
+                      <td colspan="3">&nbsp;</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
         </div>
       </div>
-
     </div>
-  </div>
+  }
 </div>
-  </div>
 </div>
