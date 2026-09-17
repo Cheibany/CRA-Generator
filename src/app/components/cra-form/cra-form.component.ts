@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CraService, SemaineCRA, JourCRA } from '../../services/cra.service';
 import { DocxGeneratorService, InfosCRA } from '../../services/docx-generator.service';
 
@@ -6,6 +6,7 @@ import { DocxGeneratorService, InfosCRA } from '../../services/docx-generator.se
     selector: 'app-cra-form',
     templateUrl: './cra-form.component.html',
     styleUrls: ['./cra-form.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class CraFormComponent implements OnInit {
