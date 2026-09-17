@@ -3,9 +3,10 @@ import { CraService, SemaineCRA, JourCRA } from '../../services/cra.service';
 import { DocxGeneratorService, InfosCRA } from '../../services/docx-generator.service';
 
 @Component({
-  selector: 'app-cra-form',
-  templateUrl: './cra-form.component.html',
-  styleUrls: ['./cra-form.component.scss']
+    selector: 'app-cra-form',
+    templateUrl: './cra-form.component.html',
+    styleUrls: ['./cra-form.component.scss'],
+    standalone: false
 })
 export class CraFormComponent implements OnInit {
 
