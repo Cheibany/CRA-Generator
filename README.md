@@ -1,29 +1,53 @@
-# CraGenerator
-
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.0.4.
-
-## Development server
-
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
-
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
-
 # CRA-Generator
+
+Application web qui génère la **fiche d'activité mensuelle (CRA)** d'un consultant au format Word (`.docx`) : une page par semaine, du lundi au vendredi, avec les jours fériés marocains pré-remplis.
+
+Tout se passe dans le navigateur : aucune donnée n'est envoyée à un serveur.
+
+## Fonctionnalités
+
+- Découpage automatique du mois en semaines, jours fériés et jours hors période gérés
+- Saisie directe dans un aperçu fidèle au document final
+- Journées, demi-journées (0,5) et jours non facturés — cliquez sur la valeur pour la changer
+- Recopie d'une intervention sur les jours vides suivants de la semaine
+- Total par semaine et total du mois
+- Sauvegarde automatique dans le navigateur (paramètres + saisies de chaque mois)
+- Société, client et logo personnalisables
+- Export `.docx`
+
+## Démarrage
+
+```bash
+npm install
+npm start
+```
+
+L'application est servie sur `http://localhost:4200/`.
+
+## Scripts
+
+| Commande | Rôle |
+| --- | --- |
+| `npm start` | Serveur de développement |
+| `npm run build` | Build de production dans `dist/` |
+| `npm test` | Tests unitaires (Vitest), une seule exécution |
+| `npm run test:watch` | Tests unitaires en mode surveillance |
+
+## Structure
+
+```
+src/app/
+├── models/cra.models.ts                 Types et fonctions de formatage
+├── services/
+│   ├── cra.service.ts                   Découpage du mois en semaines
+│   ├── jours-feries.service.ts          Jours fériés du Maroc
+│   ├── stockage.service.ts              Sauvegarde locale (localStorage)
+│   ├── docx-generator.service.ts        Téléchargement du document
+│   └── docx-builder.ts                  Construction du .docx (chargé à la demande)
+├── directives/auto-grow.directive.ts    Zones de texte auto-ajustées
+└── components/cra-form/                 Écran principal
+```
+
+## Jours fériés
+
+Les jours fériés fixes sont calculés pour toute année. Les fêtes religieuses dépendent de l'observation lunaire : leurs dates sont **prévisionnelles** et listées par année dans `jours-feries.service.ts` (`feriesMobiles`). Pensez à les vérifier et à ajouter chaque nouvelle année ; un jour peut toujours être corrigé à la main dans l'aperçu.
