@@ -1,110 +1,202 @@
 <div class="cra-page">
-  <div class="orb orb--1"></div>
-  <div class="orb orb--2"></div>
+  <div class="orb orb--1" aria-hidden="true"></div>
+  <div class="orb orb--2" aria-hidden="true"></div>
+  <div class="orb orb--3" aria-hidden="true"></div>
 
-  <div class="cra-layout">
-    <div class="glass-panel">
+  <main class="cra-layout" [class.sans-apercu]="!showPreview">
+
+    <!-- ===== PANNEAU DE SAISIE ===== -->
+    <section class="glass-panel" aria-label="Paramètres du CRA">
       <header class="panel-header">
-        <div class="panel-header__text">
-          <span class="panel-eyebrow">Générateur de CRA</span>
+        <div>
+          <span class="panel-eyebrow"><span class="pulse" aria-hidden="true"></span>Générateur de CRA</span>
           <h1>Compte-rendu d'activité mensuel</h1>
         </div>
-        <button class="btn-toggle" (click)="togglePreview()" [class.active]="showPreview">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+        <button type="button" class="btn-toggle" (click)="showPreview = !showPreview"
+                [class.active]="showPreview" [attr.aria-pressed]="showPreview">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
             <circle cx="12" cy="12" r="3"/>
           </svg>
-          {{ showPreview ? 'Masquer aperçu' : 'Voir aperçu' }}
+          Aperçu
         </button>
       </header>
 
-      <div class="field-row">
+      <!-- Période -->
+      <div class="periode">
+        <button type="button" class="icon-btn" (click)="moisVoisin(-1)" aria-label="Mois précédent">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
         <div class="field">
-          <label>Mois</label>
-          <select [(ngModel)]="mois" (ngModelChange)="genererApercu()">
-            @for (m of mois_liste; track m) {
-              <option [value]="m.valeur">{{ m.nom }}</option>
+          <label for="mois">Mois</label>
+          <select id="mois" [(ngModel)]="mois" (ngModelChange)="chargerPeriode()">
+            @for (m of moisListe; track m.valeur) {
+              <option [ngValue]="m.valeur">{{ m.nom }}</option>
             }
           </select>
         </div>
-        <div class="field">
-          <label>Année</label>
-          <input type="number" [(ngModel)]="annee" (ngModelChange)="genererApercu()">
+        <div class="field field--annee">
+          <label for="annee">Année</label>
+          <input id="annee" type="number" min="2000" max="2100" step="1"
+                 [(ngModel)]="annee" (ngModelChange)="chargerPeriode()"
+                 [class.invalide]="!anneeValide" [attr.aria-invalid]="!anneeValide">
+        </div>
+        <button type="button" class="icon-btn" (click)="moisVoisin(1)" aria-label="Mois suivant">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+      @if (!anneeValide) {
+        <p class="aide aide--erreur">Saisissez une année entre 2000 et 2100.</p>
+      }
+
+      <!-- Synthèse du mois -->
+      <div class="synthese">
+        <div class="anneau" role="img"
+             [attr.aria-label]="formaterTotal(totalMois) + ' jours facturés sur ' + joursOuvresMois + ' jours ouvrés'">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <defs>
+              <linearGradient id="anneau-degrade" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#5EEAD4"/>
+                <stop offset="1" stop-color="#818CF8"/>
+              </linearGradient>
+            </defs>
+            <circle class="anneau__fond" cx="32" cy="32" r="27"/>
+            <circle class="anneau__valeur" cx="32" cy="32" r="27" pathLength="100"
+                    [style.stroke-dashoffset]="100 - progressionMois * 100"/>
+          </svg>
+          @for (t of [totalMois]; track t) {
+            <span class="anneau__nombre">{{ formaterFacture(t) }}</span>
+          }
+        </div>
+        <div class="synthese__texte">
+          <strong>{{ nomMois }} {{ anneeValide ? annee : '' }}</strong>
+          <span>{{ formaterFacture(totalMois) }} jour{{ totalMois > 1 ? 's' : '' }} facturé{{ totalMois > 1 ? 's' : '' }}
+            sur {{ joursOuvresMois }} ouvrés</span>
+          <span class="synthese__detail">
+            {{ semaines.length }} semaines
+            @if (nbFeriesMois) { · {{ nbFeriesMois }} férié{{ nbFeriesMois > 1 ? 's' : '' }} }
+          </span>
         </div>
       </div>
+      @if (anneeValide && !feriesMobilesConnus) {
+        <p class="aide">Les fêtes religieuses de {{ annee }} ne sont pas encore renseignées : ajustez ces jours à la main dans l'aperçu.</p>
+      }
 
       <div class="divider"></div>
 
       <div class="field">
-        <label>Consultant</label>
-        <input type="text" [(ngModel)]="infos.consultant">
+        <label for="consultant">Consultant</label>
+        <input id="consultant" type="text" autocomplete="name" [(ngModel)]="infos.consultant" (ngModelChange)="sauverInfos()">
       </div>
-
       <div class="field">
-        <label>Profil</label>
-        <input type="text" [(ngModel)]="infos.profil">
+        <label for="profil">Profil</label>
+        <input id="profil" type="text" [(ngModel)]="infos.profil" (ngModelChange)="sauverInfos()">
       </div>
-
       <div class="field">
-        <label>Marché</label>
-        <input type="text" [(ngModel)]="infos.marche">
+        <label for="marche">Marché</label>
+        <input id="marche" type="text" [(ngModel)]="infos.marche" (ngModelChange)="sauverInfos()">
       </div>
-
       <div class="field">
-        <label>Prestation</label>
-        <input type="text" [(ngModel)]="infos.prestation">
+        <label for="prestation">Prestation</label>
+        <input id="prestation" type="text" [(ngModel)]="infos.prestation" (ngModelChange)="sauverInfos()">
       </div>
 
-      <button class="btn-generate" (click)="genererCRA()" [disabled]="isGenerating">
-        @if (!isGenerating) {
-          <span>Générer le CRA (.docx)</span>
-        }
+      <!-- Paramètres avancés -->
+      <button type="button" class="accordeon" (click)="parametresOuverts = !parametresOuverts"
+              [attr.aria-expanded]="parametresOuverts" aria-controls="parametres">
+        <span>Société, client et logo</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="repliable" id="parametres" [class.ouvert]="parametresOuverts" [attr.inert]="parametresOuverts ? null : ''">
+        <div class="repliable__contenu">
+          <div class="field-row">
+            <div class="field">
+              <label for="societe">Société</label>
+              <input id="societe" type="text" [(ngModel)]="infos.societe" (ngModelChange)="sauverInfos()">
+            </div>
+            <div class="field">
+              <label for="client">Client</label>
+              <input id="client" type="text" [(ngModel)]="infos.pourClient" (ngModelChange)="sauverInfos()">
+            </div>
+          </div>
+          <div class="logo-ligne">
+            <img class="logo-apercu" [src]="infos.logo || 'assets/logo-ca.jpg'" alt="Logo affiché dans l'en-tête du document">
+            <div class="logo-actions">
+              <label class="btn-secondaire">
+                Changer le logo
+                <input type="file" accept="image/png,image/jpeg" class="sr-only" (change)="onLogoChoisi($event)">
+              </label>
+              @if (infos.logo) {
+                <button type="button" class="btn-lien" (click)="supprimerLogo()">Logo par défaut</button>
+              }
+              <span class="aide">PNG ou JPEG, 300 Ko max.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn-generate" (click)="genererCRA()" [disabled]="isGenerating" [class.succes]="succes">
         @if (isGenerating) {
-          <span class="btn-loading">
-            <span class="spinner"></span> Génération...
+          <span class="btn-contenu"><span class="spinner" aria-hidden="true"></span>Génération…</span>
+        } @else if (succes) {
+          <span class="btn-contenu">
+            <svg class="coche" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            CRA téléchargé
+          </span>
+        } @else {
+          <span class="btn-contenu">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16"/></svg>
+            Générer le CRA (.docx)
           </span>
         }
       </button>
-    </div>
 
-    <!-- APERÇU -->
-    @if (showPreview && semaines.length) {
-      <div class="apercu-wrapper">
-        <div class="slider-nav">
-          <button class="nav-arrow" (click)="semainePrecedente()" [disabled]="semaineActive === 0">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
+      <div class="pied-panneau">
+        <span class="sauvegarde">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          Enregistré dans ce navigateur
+        </span>
+        <button type="button" class="btn-lien" (click)="reinitialiserMois()">Réinitialiser le mois</button>
+      </div>
+    </section>
+
+    <!-- ===== APERÇU ===== -->
+    @if (showPreview && semaineCourante; as semaine) {
+      <section class="apercu-wrapper" aria-label="Aperçu de la fiche d'activité">
+        <nav class="onglets" aria-label="Semaines du mois"
+             (keydown.arrowleft)="semainePrecedente()" (keydown.arrowright)="semaineSuivante()">
+          <button type="button" class="icon-btn" (click)="semainePrecedente()" [disabled]="semaineActive === 0" aria-label="Semaine précédente">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <div class="slider-dots">
-            @for (s of semaines; track s; let i = $index) {
-              <button
-                class="dot"
-                [class.active]="i === semaineActive"
-                (click)="allerASemaine(i)">
+          <div class="onglets__liste">
+            @for (s of semaines; track s.periodeDebut; let i = $index) {
+              <button type="button" class="onglet" [class.active]="i === semaineActive"
+                      [attr.aria-current]="i === semaineActive ? 'true' : null" (click)="allerASemaine(i)">
+                <span class="onglet__num">S{{ i + 1 }}</span>
+                <span class="onglet__dates">{{ libelleSemaine(s) }}</span>
               </button>
             }
           </div>
-          <button class="nav-arrow" (click)="semaineSuivante()" [disabled]="semaineActive === semaines.length - 1">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
+          <button type="button" class="icon-btn" (click)="semaineSuivante()" [disabled]="semaineActive === semaines.length - 1" aria-label="Semaine suivante">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-        </div>
+        </nav>
+
         <div class="slider-viewport" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
-          <div class="slider-track" [style.transform]="'translateX(-' + (semaineActive * 100) + '%)'">
-            @for (semaine of semaines; track semaine; let i = $index) {
-              <div class="semaine-card">
-                <div class="semaine-card__header">
-                  <div class="semaine-card__title">
-                    <span class="semaine-badge">Semaine {{ i + 1 }} / {{ semaines.length }}</span>
-                    <span class="semaine-periode">{{ semaine.periodeDebut }} → {{ semaine.periodeFin }}</span>
-                  </div>
-                  <span class="jours-badge">{{ getNbJoursTravailles(semaine) }} / 5 jours</span>
+          <!-- La carte est recréée à chaque changement de semaine pour rejouer l'animation -->
+          @for (sem of [semaine]; track sem.periodeDebut) {
+            <article class="semaine-card" [class.depuis-gauche]="direction === 'arriere'">
+              <header class="semaine-card__header">
+                <div class="semaine-card__title">
+                  <span class="semaine-badge">Semaine {{ semaineActive + 1 }} / {{ semaines.length }}</span>
+                  <span class="semaine-periode">{{ sem.periodeDebut }} → {{ sem.periodeFin }}</span>
                 </div>
-                <div class="apercu-scroll">
-                  <table class="apercu-table">
-                    <colgroup>
+                <span class="jours-badge">{{ formaterFacture(totalSemaine(sem)) }} / {{ joursOuvresSemaine(sem) }} jours</span>
+              </header>
+
+              <div class="apercu-scroll">
+                <table class="apercu-table">
+                  <colgroup>
                     <col style="width:9.93%"><col style="width:7.81%">
                     <col style="width:6.19%"><col style="width:1.45%">
                     <col style="width:21.42%"><col style="width:7.19%">
@@ -113,14 +205,14 @@
                   <tbody>
                     <tr>
                       <td colspan="2" class="label">Mission</td>
-                      <td colspan="6" class="bold">{{ infos.marche }}<br>{{ infos.prestation }}</td>
+                      <td colspan="6" class="bold"><u>{{ infos.marche }}</u><br>{{ infos.prestation }}</td>
                     </tr>
                     <tr>
                       <td colspan="2" class="label">Période</td>
-                      <td class="label bold">Du</td>
-                      <td colspan="3" class="bold center">{{ semaine.periodeDebut }}</td>
-                      <td class="label bold">Au</td>
-                      <td class="bold center">{{ semaine.periodeFin }}</td>
+                      <td class="label bold center">Du</td>
+                      <td colspan="3" class="bold center">{{ sem.periodeDebut }}</td>
+                      <td class="label bold center">Au</td>
+                      <td class="bold center">{{ sem.periodeFin }}</td>
                     </tr>
                     <tr>
                       <td colspan="2" class="label">Consultant</td>
@@ -131,39 +223,53 @@
                       <td colspan="6" class="bold">{{ infos.profil }}</td>
                     </tr>
                     <tr class="header-row">
-                      <td class="label bold center vcenter">Jour</td>
-                      <td class="label bold center vcenter">Date</td>
-                      <td colspan="2" class="label bold center vcenter">Facturé J/H</td>
-                      <td colspan="4" class="label bold center">Nature Intervention</td>
+                      <td class="bold center vcenter">Jour</td>
+                      <td class="bold center vcenter">Date</td>
+                      <td colspan="2" class="bold center vcenter">Facturé J/H</td>
+                      <td colspan="4" class="bold center">Nature Intervention</td>
                     </tr>
-                    @for (j of semaine.jours; track j) {
-                      <tr class="jour-row" [class.jour-ferie]="j.ferie">
+                    @for (j of sem.jours; track j.cle; let r = $index) {
+                      <tr class="jour-row" [class.jour-ferie]="j.ferie" [class.hors-periode]="j.horsPeriode" [style.--i]="r">
                         <td class="vcenter">{{ j.jour }}</td>
                         <td class="center vcenter">{{ j.date }}</td>
                         <td colspan="2" class="center vcenter">
-                          <button type="button" class="toggle-facture" [class.on]="j.facture === '1'" (click)="toggleFacture(j)">
-                            {{ j.facture === '1' ? '1' : '0' }}
-                          </button>
+                          @for (f of [j.facture]; track f) {
+                            <button type="button" class="toggle-facture"
+                                    [class.on]="j.facture === 1" [class.demi]="j.facture === 0.5"
+                                    [disabled]="j.horsPeriode" (click)="cyclerFacture(j)"
+                                    [attr.aria-label]="j.jour + ' ' + j.date + ' : ' + formaterFacture(j.facture) + ' jour facturé. Cliquer pour changer.'"
+                                    title="1 → 0,5 → 0">
+                              {{ formaterFacture(j.facture) }}
+                            </button>
+                          }
                         </td>
-                        <td colspan="4">
-                          <textarea
-                            class="cell-textarea"
-                            [(ngModel)]="j.natureIntervention"
-                            (input)="autoGrow($event)"
-                            rows="2"
-                            placeholder="Nature de l'intervention...">
-                          </textarea>
+                        <td colspan="4" class="cellule-saisie">
+                          @if (j.horsPeriode) {
+                            <span class="hors-periode__texte">Hors période</span>
+                          } @else {
+                            <textarea appAutoGrow class="cell-textarea" rows="2"
+                                      [(ngModel)]="j.natureIntervention" (ngModelChange)="sauverSaisies()"
+                                      [attr.aria-label]="'Nature de l\'intervention du ' + j.jour + ' ' + j.date"
+                                      placeholder="Nature de l'intervention…"></textarea>
+                            @if (peutDupliquer(sem, j)) {
+                              <button type="button" class="btn-dupliquer" (click)="dupliquerSurSemaine(sem, j)"
+                                      title="Recopier sur les jours vides suivants de la semaine"
+                                      aria-label="Recopier sur les jours vides suivants de la semaine">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 4v15m0 0l-5-5m5 5l5-5"/></svg>
+                              </button>
+                            }
+                          }
                         </td>
                       </tr>
                     }
                     <tr class="total-row">
-                      <td class="bold">Total</td>
+                      <td class="bold center">Total</td>
                       <td></td>
                       <td colspan="2"></td>
-                      <td colspan="4" class="bold">({{ getNbJoursTravailles(semaine).toString().padStart(2,'0') }}) jours Profil {{ infos.profil }}</td>
+                      <td colspan="4" class="bold">({{ formaterTotal(totalSemaine(sem)) }}) jours Profil {{ infos.profil }}</td>
                     </tr>
                     <tr>
-                      <td colspan="5" class="label bold center">Pour 01 Talent</td>
+                      <td colspan="5" class="label bold center">Pour {{ infos.societe }}</td>
                       <td colspan="3" class="label bold center">{{ infos.pourClient }}</td>
                     </tr>
                     <tr class="signature-row">
@@ -173,11 +279,23 @@
                   </tbody>
                 </table>
               </div>
-            </div>
+
+              <footer class="legende">
+                <span><i class="pastille pastille--on"></i>1 jour</span>
+                <span><i class="pastille pastille--demi"></i>Demi-journée</span>
+                <span><i class="pastille pastille--ferie"></i>Férié</span>
+                <span class="legende__astuce">Cliquez sur la valeur facturée pour la changer</span>
+              </footer>
+            </article>
           }
         </div>
-      </div>
-    </div>
-  }
-</div>
+      </section>
+    }
+  </main>
+
+  <div class="toast-zone" aria-live="polite">
+    @if (toast) {
+      <div class="toast" [class]="'toast toast--' + toast.type" role="status">{{ toast.message }}</div>
+    }
+  </div>
 </div>

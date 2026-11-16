@@ -1,12 +1,10 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { CraFormComponent } from './components/cra-form/cra-form.component';
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss'],
-    changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+  selector: 'app-root',
+  template: '<app-cra-form />',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CraFormComponent]
 })
-export class AppComponent {
-  title = 'cra-generator';
-}
+export class AppComponent { }
